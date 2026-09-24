@@ -1,0 +1,75 @@
+{
+    "name": "innis/hubstr-blossom",
+    "description": "Standalone PHP Blossom media server for Nostr, implementing BUD-01, 02, 04, 05, 06, 08, 09, 11 and 12",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "John Innis",
+            "email": "john@innis.xyz",
+            "homepage": "https://www.innis.xyz/"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "ext-ctype": "*",
+        "ext-exif": "*",
+        "ext-fileinfo": "*",
+        "ext-gd": "*",
+        "ext-pdo_sqlite": "*",
+        "amphp/amp": "^3",
+        "amphp/byte-stream": "^2",
+        "amphp/dns": "^2",
+        "amphp/file": "^3",
+        "amphp/http": "^2",
+        "amphp/http-client": "^5.3",
+        "amphp/http-server": "^3",
+        "amphp/http-server-router": "^2",
+        "amphp/http-server-static-content": "^2",
+        "amphp/parallel": "^2",
+        "amphp/socket": "^2",
+        "amphp/sync": "^2",
+        "innis/hubstr-core": "^0.2",
+        "innis/nostr-blossom": "^0.4.1",
+        "innis/nostr-core": "^0.8.3",
+        "kornrunner/blurhash": "^1.2"
+    },
+    "require-dev": {
+        "ext-ffi": "*",
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "innis/coding-standards": "^0.1",
+        "league/uri": "^7",
+        "phpstan/phpstan": "~2.2.6",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpunit/phpunit": "^13.1",
+        "rector/rector": "~2.5.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "Innis\\Hubstr\\Blossom\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Innis\\Hubstr\\Blossom\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": [
+            "phpunit",
+            "@analyse"
+        ],
+        "test-unit": "phpunit --testsuite=Unit",
+        "test-integration": "phpunit --testsuite=Integration",
+        "test-acceptance": "phpunit --testsuite=Acceptance --testdox",
+        "test-coverage": "XDEBUG_MODE=coverage phpunit --coverage-html var/tests/coverage/html --coverage-text --coverage-clover var/tests/coverage/clover.xml",
+        "analyse": "phpstan analyse",
+        "fix-style": "php-cs-fixer fix",
+        "check-style": "php-cs-fixer fix --dry-run --diff",
+        "rector": "rector process",
+        "check-rector": "rector process --dry-run"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

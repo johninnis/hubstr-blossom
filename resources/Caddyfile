@@ -1,0 +1,95 @@
+# Hubstr Blossom — Caddy reverse proxy
+# Automatic TLS + blob streaming over a plain reverse proxy
+#
+# Caddy terminates TLS (automatic HTTPS via Let's Encrypt) and reverse-proxies
+# to the amphp daemon. The daemon streams blob bytes itself — handling ranges,
+# ETags, CORS and the stored Content-Type — so a plain reverse proxy is all
+# that is required. There is deliberately no X-Accel-Redirect or static-file
+# offload: blobs are content-addressed with no extension, and BUD-01 requires
+# the stored MIME type to be returned, which a static-file handler cannot
+# derive.
+#
+# This config runs on a stock Caddy 2.x (e.g. Debian's `apt install caddy`)
+# with no plugins or custom build. HTTP/2 and HTTP/3 are on by default.
+{
+	# ACME account email — used for expiry notices. Replace with your own.
+	email admin@example.com
+}
+
+# Replace with your own domain, e.g. blossom.innis.xyz
+blossom.example.com {
+	# ------------------------------------------------------------------
+	# Request limits
+	# ------------------------------------------------------------------
+	# Defence in depth: reject oversized uploads at the edge. The daemon
+	# also enforces this and returns 413. Keep this aligned with
+	# max_upload_bytes in config/blossom.php — note the unit: Caddy's
+	# 100MiB is 104857600 bytes (the config value); 100MB would be
+	# 100000000 and silently reject the top ~4.6MB of valid uploads.
+	request_body {
+		max_size 100MiB
+	}
+
+	# ------------------------------------------------------------------
+	# Compression
+	# ------------------------------------------------------------------
+	# Compresses the landing page, CSS and /list JSON. Blob media types
+	# (image/video/audio) are not in Caddy's default compressible set, so
+	# already-compressed blob bytes pass through untouched.
+	encode zstd gzip
+
+	# ------------------------------------------------------------------
+	# Security headers
+	# ------------------------------------------------------------------
+	# TLS terminates here, so HSTS belongs here rather than in the daemon.
+	# CORS headers are NOT set here — the daemon owns them (BUD-01
+	# requires them on error responses too, which an edge header cannot
+	# guarantee consistently).
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+
+	# Blob responses are user-uploaded content served from this origin.
+	# allowed_types in config/blossom.php already excludes active content
+	# (HTML/SVG), but sandboxing blob documents at the edge keeps a config
+	# change from ever turning an upload into stored XSS. CSP on the
+	# resource itself does not affect cross-origin <img>/<video> embeds.
+	@blob path_regexp ^/[0-9a-f]{64}(\.[A-Za-z0-9]+)?$
+	header @blob Content-Security-Policy "sandbox; default-src 'none'"
+
+	# ------------------------------------------------------------------
+	# Access log
+	# ------------------------------------------------------------------
+	# JSON lines, rotated by Caddy itself. The daemon logs to standard output
+	# only (systemd captures it in the journal); this is the edge view.
+	log {
+		output file /var/log/caddy/blossom-access.log {
+			roll_size 100MiB
+			roll_keep 10
+		}
+	}
+
+	# ------------------------------------------------------------------
+	# Proxy
+	# ------------------------------------------------------------------
+	# Caddy streams request and response bodies (no buffering), which is
+	# what large blob uploads and range requests need. It adds
+	# X-Forwarded-For automatically; the daemon consumes it because
+	# trusted_proxies in config/blossom.php lists 127.0.0.1 — keep the two
+	# in sync if the proxy ever moves off-box.
+	reverse_proxy 127.0.0.1:8081
+
+	# When the daemon is down Caddy would otherwise emit an empty-bodied
+	# 502; give probes and humans a minimal plain-text body instead.
+	handle_errors {
+		respond "{err.status_code} {err.status_text}" {err.status_code}
+	}
+}
+
+# An HTTP response cache is intentionally omitted. It rarely pays off here: the
+# daemon already holds blob bytes on local disk, so a cache would duplicate them,
+# and clustering the daemon scales serving without that cost. If you ever do want
+# one, Caddy's cache-handler module is not in the standard build and needs a
+# custom binary (the caddyserver.com download page, or xcaddy).

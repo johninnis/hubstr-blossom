@@ -1,0 +1,28 @@
+# Hubstr Blossom — systemd service unit
+# Copy to /etc/systemd/system/hubstr-blossom.service and edit the
+# User, WorkingDirectory, and ReadWritePaths values for your host.
+
+[Unit]
+Description=Hubstr Blossom
+After=network.target
+
+[Service]
+Type=simple
+User=hubstr
+WorkingDirectory=/srv/hubstr-blossom
+ExecStart=/usr/bin/php bin/hubstr-blossom.php
+Restart=on-failure
+RestartSec=5
+
+# The service has no long-lived streams or background loops, so it stops
+# promptly on its own; cap the wait as a backstop against systemd's 90s default.
+TimeoutStopSec=15
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/hubstr-blossom/var /srv/hubstr-blossom/data
+
+[Install]
+WantedBy=multi-user.target
