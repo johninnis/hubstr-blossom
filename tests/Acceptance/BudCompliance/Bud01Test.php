@@ -146,29 +146,28 @@ final class Bud01Test extends TestCase
 
         self::assertSame(204, $response->status());
         self::assertSame('*', $response->header('access-control-allow-origin'));
-        self::assertSame('HEAD, OPTIONS, PUT', $response->header('access-control-allow-methods'));
-        self::assertSame('Authorization, Content-Type, X-SHA-256, X-Content-Length, X-Content-Type', $response->header('access-control-allow-headers'));
+        self::assertSame('DELETE, GET, HEAD, OPTIONS, PUT', $response->header('access-control-allow-methods'));
+        self::assertSame('Authorization, *', $response->header('access-control-allow-headers'));
     }
 
-    #[TestDox('BUD-01 — Access-Control-Allow-Methods reflects only the methods the path implements')]
-    public function testOptionsOnUploadDoesNotAdvertiseReadOrDeleteMethods(): void
+    #[TestDox('BUD-01 — Every preflight advertises GET, HEAD, PUT and DELETE at minimum')]
+    public function testOptionsOnUploadAdvertisesTheRequiredMethods(): void
     {
         $methods = self::$server->request('OPTIONS', '/upload')->header('access-control-allow-methods');
 
         self::assertNotNull($methods);
-        self::assertStringContainsString('OPTIONS', $methods);
-        self::assertStringContainsString('PUT', $methods);
-        self::assertStringNotContainsString('GET', $methods);
-        self::assertStringNotContainsString('DELETE', $methods);
+        foreach (['GET', 'HEAD', 'PUT', 'DELETE'] as $required) {
+            self::assertContains($required, array_map(trim(...), explode(',', $methods)));
+        }
     }
 
-    #[TestDox('BUD-01 — The blob path preflight advertises its GET, HEAD and DELETE methods')]
-    public function testOptionsOnBlobPathAdvertisesReadAndDeleteMethods(): void
+    #[TestDox('BUD-01 — The blob path preflight advertises every required method')]
+    public function testOptionsOnBlobPathAdvertisesTheRequiredMethods(): void
     {
         $response = self::$server->request('OPTIONS', '/'.hash('sha256', 'some blob'));
 
         self::assertSame(204, $response->status());
-        self::assertSame('DELETE, GET, HEAD, OPTIONS', $response->header('access-control-allow-methods'));
+        self::assertSame('DELETE, GET, HEAD, OPTIONS, PUT', $response->header('access-control-allow-methods'));
     }
 
     #[TestDox('BUD-01 — Error responses (status >= 400) MAY include a human-readable X-Reason header')]

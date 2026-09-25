@@ -187,8 +187,7 @@ final class Bud06Test extends TestCase
         self::assertNotNull($allowed);
 
         $permitted = array_map(strtolower(...), array_map(trim(...), explode(',', $allowed)));
-        foreach (['authorization', 'x-sha-256', 'x-content-length', 'x-content-type'] as $header) {
-            self::assertContains($header, $permitted);
-        }
+        self::assertContains('authorization', $permitted);
+        self::assertContains('*', $permitted);
     }
 }

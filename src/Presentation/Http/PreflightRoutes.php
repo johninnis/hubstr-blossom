@@ -27,9 +27,12 @@ final class PreflightRoutes
 
         $preflight = [];
         foreach ($methodsByPattern as $pattern => $methods) {
-            if (isset($methods[HttpMethod::Get->value])) {
-                $methods[HttpMethod::Head->value] = true;
-            }
+            // BUD-01 requires every preflight to advertise these methods at minimum,
+            // independently of which methods the matched path implements.
+            $methods[HttpMethod::Get->value] = true;
+            $methods[HttpMethod::Head->value] = true;
+            $methods[HttpMethod::Put->value] = true;
+            $methods[HttpMethod::Delete->value] = true;
             $methods[HttpMethod::Options->value] = true;
 
             $names = array_keys($methods);
