@@ -31,7 +31,7 @@ final class PreflightRoutesTest extends TestCase
         );
     }
 
-    public function testEmitsOneOptionsRoutePerPatternAdvertisingOnlyTheMethodsItImplements(): void
+    public function testEmitsOneOptionsRoutePerPatternAdvertisingTheRequiredMethods(): void
     {
         $allow = $this->allowByPattern(
             new Route(HttpMethod::Get, '/{sha256:[0-9a-f]{64}}', $this->noop),
@@ -42,18 +42,18 @@ final class PreflightRoutesTest extends TestCase
             new Route(HttpMethod::Get, '/list/{pubkey:[0-9a-f]{64}}', $this->noop),
         );
 
-        self::assertSame('DELETE, GET, HEAD, OPTIONS', $allow['/{sha256:[0-9a-f]{64}}']);
-        self::assertSame('HEAD, OPTIONS, PUT', $allow['/upload']);
-        self::assertSame('GET, HEAD, OPTIONS', $allow['/list/{pubkey:[0-9a-f]{64}}']);
+        self::assertSame('DELETE, GET, HEAD, OPTIONS, PUT', $allow['/{sha256:[0-9a-f]{64}}']);
+        self::assertSame('DELETE, GET, HEAD, OPTIONS, PUT', $allow['/upload']);
+        self::assertSame('DELETE, GET, HEAD, OPTIONS, PUT', $allow['/list/{pubkey:[0-9a-f]{64}}']);
     }
 
-    public function testAdvertisesHeadWhereverGetExists(): void
+    public function testAdvertisesTheRequiredMethodsEvenWhenTheRouteOnlyImplementsPut(): void
     {
         $allow = $this->allowByPattern(
-            new Route(HttpMethod::Get, '/list/{pubkey:[0-9a-f]{64}}', $this->noop),
+            new Route(HttpMethod::Put, '/upload', $this->noop),
         );
 
-        self::assertSame('GET, HEAD, OPTIONS', $allow['/list/{pubkey:[0-9a-f]{64}}']);
+        self::assertSame('DELETE, GET, HEAD, OPTIONS, PUT', $allow['/upload']);
     }
 
     public function testEachPreflightRouteIsAnOptionsRouteRespondingWith204(): void
