@@ -6,10 +6,10 @@ namespace Innis\Hubstr\Blossom\Tests\Acceptance\BudCompliance;
 
 use Innis\Hubstr\Blossom\Tests\Support\BlossomTestServer;
 use Innis\Nostr\Core\Domain\Collection\TagCollection;
-use Innis\Nostr\Core\Domain\Factory\RumourFactory;
 use Innis\Nostr\Core\Domain\ValueObject\Content\EventContent;
 use Innis\Nostr\Core\Domain\ValueObject\Content\EventKind;
 use Innis\Nostr\Core\Domain\ValueObject\Identity\KeyPair;
+use Innis\Nostr\Core\Domain\ValueObject\Protocol\Rumour;
 use Innis\Nostr\Core\Domain\ValueObject\Tag\Tag;
 use Innis\Nostr\Core\Domain\ValueObject\Tag\TagType;
 use PHPUnit\Framework\Attributes\TestDox;
@@ -34,10 +34,10 @@ final class Bud09Test extends TestCase
     {
         $keyPair = KeyPair::generate(self::$server->signer());
         $tags = new TagCollection([
-            new Tag(TagType::sha256(), [hash('sha256', 'reported blob')]),
+            Tag::fromArray([TagType::SHA256, hash('sha256', 'reported blob')]),
         ]);
 
-        $event = RumourFactory::createCustomKind(
+        $event = Rumour::draft(
             $keyPair->getPublicKey(),
             EventKind::fromInt(EventKind::REPORTING),
             EventContent::fromString('This blob violates policy'),
@@ -70,11 +70,11 @@ final class Bud09Test extends TestCase
     {
         $keyPair = KeyPair::generate(self::$server->signer());
 
-        $event = RumourFactory::createCustomKind(
+        $event = Rumour::draft(
             $keyPair->getPublicKey(),
             EventKind::fromInt(EventKind::TEXT_NOTE),
             EventContent::fromString('Not a report'),
-            new TagCollection([new Tag(TagType::sha256(), [hash('sha256', 'blob')])]),
+            new TagCollection([Tag::fromArray([TagType::SHA256, hash('sha256', 'blob')])]),
         )->sign($keyPair, self::$server->signer());
 
         $response = self::$server->request('PUT', '/report', [], (string) json_encode($event->toArray()));
@@ -87,7 +87,7 @@ final class Bud09Test extends TestCase
     {
         $keyPair = KeyPair::generate(self::$server->signer());
 
-        $event = RumourFactory::createCustomKind(
+        $event = Rumour::draft(
             $keyPair->getPublicKey(),
             EventKind::fromInt(EventKind::REPORTING),
             EventContent::fromString('No x tags'),

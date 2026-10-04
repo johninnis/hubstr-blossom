@@ -7,7 +7,7 @@ namespace Innis\Hubstr\Blossom;
 use Amp\Parallel\Worker\ContextWorkerPool;
 use Amp\Parallel\Worker\WorkerPool;
 use Innis\Hubstr\Blossom\Application\Port\BlobReportQueryInterface;
-use Innis\Hubstr\Blossom\Infrastructure\Config\HostConfig;
+use Innis\Hubstr\Blossom\Domain\ValueObject\HostConfig;
 use Innis\Hubstr\Blossom\Infrastructure\Filesystem\FileByteStreamer;
 use Innis\Hubstr\Blossom\Infrastructure\Filesystem\FilesystemBlobInspector;
 use Innis\Hubstr\Blossom\Infrastructure\Filesystem\FilesystemBlobStore;
@@ -23,11 +23,13 @@ use Innis\Hubstr\Blossom\Infrastructure\Persistence\SqliteBlobReportStore;
 use Innis\Hubstr\Blossom\Infrastructure\Process\BlossomLifecycle;
 use Innis\Hubstr\Blossom\Infrastructure\Worker\WorkerBlobInspector;
 use Innis\Hubstr\Blossom\Infrastructure\Worker\WorkerMediaOptimiser;
-use Innis\Hubstr\Blossom\Presentation\Http\BlobController;
 use Innis\Hubstr\Blossom\Presentation\Http\BlobIngestController;
+use Innis\Hubstr\Blossom\Presentation\Http\BlobManagementController;
+use Innis\Hubstr\Blossom\Presentation\Http\BlobMirrorController;
 use Innis\Hubstr\Blossom\Presentation\Http\BlobPreflightController;
 use Innis\Hubstr\Blossom\Presentation\Http\BlobReportController;
 use Innis\Hubstr\Blossom\Presentation\Http\BlobRequestReader;
+use Innis\Hubstr\Blossom\Presentation\Http\BlobRetrievalController;
 use Innis\Hubstr\Blossom\Presentation\Http\BlobStreamResponder;
 use Innis\Hubstr\Blossom\Presentation\Http\CorsErrorHandler;
 use Innis\Hubstr\Blossom\Presentation\Http\Middleware\CorsHeaders;
@@ -57,11 +59,13 @@ use Innis\Nostr\Blossom\Application\Port\BlobStoreInterface;
 use Innis\Nostr\Blossom\Application\Port\BlossomPolicyInterface;
 use Innis\Nostr\Blossom\Application\Port\MediaOptimiserInterface;
 use Innis\Nostr\Blossom\Application\Port\RemoteBlobFetcherInterface;
+use Innis\Nostr\Blossom\Application\Service\BlobArchive;
 use Innis\Nostr\Blossom\Application\Service\BlobDescriptorFactory;
 use Innis\Nostr\Blossom\Application\Service\BlobIngestor;
-use Innis\Nostr\Blossom\Application\Service\BlobRemover;
 use Innis\Nostr\Blossom\Application\Service\BlobValidator;
+use Innis\Nostr\Blossom\Application\Service\BlossomAccessGate;
 use Innis\Nostr\Blossom\Application\Service\BlossomAuthValidator;
+use Innis\Nostr\Blossom\Application\Service\BlossomAuthValidatorInterface;
 use Innis\Nostr\Blossom\Application\Service\TenantBlossomPolicy;
 use Innis\Nostr\Blossom\Application\UseCase\CheckMediaUseCase;
 use Innis\Nostr\Blossom\Application\UseCase\CheckUploadUseCase;
@@ -72,6 +76,7 @@ use Innis\Nostr\Blossom\Application\UseCase\MirrorBlobUseCase;
 use Innis\Nostr\Blossom\Application\UseCase\OptimiseMediaUseCase;
 use Innis\Nostr\Blossom\Application\UseCase\ReportBlobUseCase;
 use Innis\Nostr\Blossom\Application\UseCase\UploadBlobUseCase;
+use Innis\Nostr\Blossom\Domain\ValueObject\UploadConstraints;
 use Innis\Nostr\Core\Application\Port\ClockInterface;
 use Innis\Nostr\Core\Domain\Service\SignatureServiceInterface;
 use Innis\Nostr\Core\Infrastructure\Crypto\Secp256k1Signer;
@@ -86,24 +91,18 @@ final class HostContainer
 
     private ?PDO $connection = null;
     private ?ClockInterface $clock = null;
-    private ?BlobStoreInterface $store = null;
     private ?BlobIndexInterface $index = null;
     private ?WorkerPool $workerPool = null;
     private ?SignatureServiceInterface $signatureService = null;
-    private ?BlossomAuthValidator $authValidator = null;
-    private ?BlossomPolicyInterface $policy = null;
+    private ?BlossomAccessGate $gate = null;
     private ?BlobIngestor $ingestor = null;
-    private ?BlobRemover $remover = null;
+    private ?BlobArchive $archive = null;
     private ?BlobInspectorInterface $inspector = null;
     private ?MediaOptimiserInterface $mediaOptimiser = null;
     private ?RemoteBlobFetcherInterface $remoteBlobFetcher = null;
     private ?SqliteBlobReportStore $reports = null;
     private ?TempFileFactory $tempFiles = null;
     private ?BlobStager $stager = null;
-    private ?BlobController $controller = null;
-    private ?BlobIngestController $ingestController = null;
-    private ?BlobPreflightController $preflightController = null;
-    private ?BlobReportController $reportController = null;
     private ?BlobRequestReader $requestReader = null;
     private ?TemplateRendererInterface $templateRenderer = null;
     private ?VersionProviderInterface $versionProvider = null;
@@ -126,7 +125,7 @@ final class HostContainer
 
     private function blobStore(): BlobStoreInterface
     {
-        return $this->store ??= new FilesystemBlobStore($this->config->getStoragePath());
+        return new FilesystemBlobStore($this->config->getStoragePath());
     }
 
     private function applySchema(PDO $pdo): PDO
@@ -141,9 +140,11 @@ final class HostContainer
         $table = new RouteTable();
 
         $routes = [
-            ...$table->blobRoutes($this->blobController()),
+            ...$table->retrievalRoutes($this->blobRetrievalController()),
+            ...$table->managementRoutes($this->blobManagementController()),
             ...$table->ingestRoutes($this->blobIngestController()),
-            ...$table->preflightRoutes($this->blobPreflightController()),
+            ...$table->mirrorRoutes($this->blobMirrorController()),
+            ...$table->preflightRoutes($this->uploadPreflightController(), $this->mediaPreflightController()),
             ...$table->reportRoutes($this->blobReportController()),
             new Route(HttpMethod::Get, '/', $this->landingPageResponder()->respond(...)),
         ];
@@ -163,7 +164,7 @@ final class HostContainer
 
     public function httpServerOptions(): HttpServerOptions
     {
-        $maxUploadBytes = $this->config->getServerConfig()->getUploadConstraints()->getMaxUploadBytes();
+        $maxUploadBytes = $this->uploadConstraints()->getMaxUploadBytes();
 
         return HttpServerOptions::create(
             self::CONCURRENCY_LIMIT,
@@ -207,34 +208,58 @@ final class HostContainer
         );
     }
 
-    private function blobController(): BlobController
+    private function blobRetrievalController(): BlobRetrievalController
     {
-        return $this->controller ??= new BlobController(
-            new GetBlobUseCase($this->blobStore(), $this->blobIndex(), $this->authValidator(), $this->policy()),
-            new DeleteBlobUseCase($this->blobRemover(), $this->authValidator(), $this->policy()),
-            new ListBlobsUseCase($this->blobIndex(), $this->authValidator(), $this->policy()),
+        return new BlobRetrievalController(
+            new GetBlobUseCase($this->blobArchive(), $this->gate()),
             new BlobStreamResponder(new FileByteStreamer()),
+            $this->blobRequestReader(),
+        );
+    }
+
+    private function blobManagementController(): BlobManagementController
+    {
+        return new BlobManagementController(
+            new DeleteBlobUseCase($this->blobArchive(), $this->gate()),
+            new ListBlobsUseCase($this->blobIndex(), $this->gate()),
             $this->blobRequestReader(),
         );
     }
 
     private function blobIngestController(): BlobIngestController
     {
-        return $this->ingestController ??= new BlobIngestController(
-            new UploadBlobUseCase($this->authValidator(), $this->policy(), $this->ingestor()),
-            new OptimiseMediaUseCase($this->mediaOptimiser(), $this->authValidator(), $this->policy(), $this->ingestor()),
-            new MirrorBlobUseCase($this->remoteBlobFetcher(), $this->authValidator(), $this->policy(), $this->ingestor()),
+        return new BlobIngestController(
+            new UploadBlobUseCase($this->gate(), $this->ingestor()),
+            new OptimiseMediaUseCase($this->mediaOptimiser(), $this->gate(), $this->ingestor()),
             $this->blobRequestReader(),
         );
     }
 
-    private function blobPreflightController(): BlobPreflightController
+    private function blobMirrorController(): BlobMirrorController
     {
-        $constraints = $this->config->getServerConfig()->getUploadConstraints();
+        return new BlobMirrorController(
+            new MirrorBlobUseCase($this->remoteBlobFetcher(), $this->gate(), $this->ingestor()),
+            $this->blobRequestReader(),
+        );
+    }
 
-        return $this->preflightController ??= new BlobPreflightController(
-            new CheckUploadUseCase($this->authValidator(), $this->policy(), $constraints),
-            new CheckMediaUseCase($this->mediaOptimiser(), $this->authValidator(), $this->policy(), $constraints),
+    private function uploadPreflightController(): BlobPreflightController
+    {
+        $constraints = $this->uploadConstraints();
+
+        return new BlobPreflightController(
+            new CheckUploadUseCase($this->gate(), $constraints)->execute(...),
+            $constraints,
+            $this->blobRequestReader(),
+        );
+    }
+
+    private function mediaPreflightController(): BlobPreflightController
+    {
+        $constraints = $this->uploadConstraints();
+
+        return new BlobPreflightController(
+            new CheckMediaUseCase($this->mediaOptimiser(), $this->gate(), $constraints)->execute(...),
             $constraints,
             $this->blobRequestReader(),
         );
@@ -242,10 +267,15 @@ final class HostContainer
 
     private function blobReportController(): BlobReportController
     {
-        return $this->reportController ??= new BlobReportController(
+        return new BlobReportController(
             new ReportBlobUseCase($this->blobReports(), $this->signatureService()),
             $this->blobRequestReader(),
         );
+    }
+
+    private function uploadConstraints(): UploadConstraints
+    {
+        return $this->config->getServerConfig()->getUploadConstraints();
     }
 
     private function blobRequestReader(): BlobRequestReader
@@ -253,24 +283,28 @@ final class HostContainer
         return $this->requestReader ??= new BlobRequestReader($this->stager());
     }
 
-    private function blobRemover(): BlobRemover
+    private function blobArchive(): BlobArchive
     {
-        return $this->remover ??= new BlobRemover($this->blobStore(), $this->blobIndex());
+        return $this->archive ??= new BlobArchive($this->blobStore(), $this->blobIndex());
     }
 
     private function ingestor(): BlobIngestor
     {
         return $this->ingestor ??= new BlobIngestor(
-            new BlobValidator($this->blobInspector(), $this->config->getServerConfig()->getUploadConstraints(), $this->authValidator()),
+            new BlobValidator($this->blobInspector(), $this->uploadConstraints(), $this->gate()),
             new BlobDescriptorFactory($this->config->getServerConfig()->getIdentity(), $this->clock()),
-            $this->blobStore(),
-            $this->blobIndex(),
+            $this->blobArchive(),
         );
     }
 
-    private function authValidator(): BlossomAuthValidator
+    private function gate(): BlossomAccessGate
     {
-        return $this->authValidator ??= new BlossomAuthValidator(
+        return $this->gate ??= new BlossomAccessGate($this->authValidator(), $this->policy());
+    }
+
+    private function authValidator(): BlossomAuthValidatorInterface
+    {
+        return new BlossomAuthValidator(
             $this->signatureService(),
             $this->clock(),
             $this->config->getServerConfig()->getIdentity(),
@@ -280,7 +314,7 @@ final class HostContainer
     private function policy(): BlossomPolicyInterface
     {
         // Deliberate: reads are public and there is no key to change that — a blob's URL travels in a public event, and content that must stay private is encrypted before upload — see ADR-0007
-        return $this->policy ??= new TenantBlossomPolicy($this->config->getServerConfig()->getTenantPubkeys());
+        return new TenantBlossomPolicy($this->config->getServerConfig()->getTenantPubkeys());
     }
 
     private function blobInspector(): BlobInspectorInterface
@@ -301,7 +335,7 @@ final class HostContainer
     private function remoteBlobFetcher(): RemoteBlobFetcherInterface
     {
         return $this->remoteBlobFetcher ??= new HttpRemoteBlobFetcher(
-            $this->config->getServerConfig()->getUploadConstraints()->getMaxUploadBytes(),
+            $this->uploadConstraints()->getMaxUploadBytes(),
             new PrivateAddressGuard($this->config->allowsPrivateMirrorHosts()),
             $this->stager(),
         );
@@ -314,7 +348,7 @@ final class HostContainer
 
     private function stager(): BlobStager
     {
-        return $this->stager ??= new BlobStager($this->tempFiles(), $this->config->getServerConfig()->getUploadConstraints()->getMaxUploadBytes());
+        return $this->stager ??= new BlobStager($this->tempFiles(), $this->uploadConstraints()->getMaxUploadBytes());
     }
 
     private function blobReports(): SqliteBlobReportStore

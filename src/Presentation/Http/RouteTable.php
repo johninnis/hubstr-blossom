@@ -14,15 +14,24 @@ final class RouteTable
     /**
      * @return list<Route>
      */
-    public function blobRoutes(BlobController $blob): array
+    public function retrievalRoutes(BlobRetrievalController $retrieval): array
     {
         return [
-            new Route(HttpMethod::Get, self::HASH_PATTERN, $blob->get(...)),
-            new Route(HttpMethod::Get, self::HASH_PATTERN.'.{ext}', $blob->get(...)),
-            new Route(HttpMethod::Head, self::HASH_PATTERN, $blob->head(...)),
-            new Route(HttpMethod::Head, self::HASH_PATTERN.'.{ext}', $blob->head(...)),
-            new Route(HttpMethod::Delete, self::HASH_PATTERN, $blob->delete(...)),
-            new Route(HttpMethod::Get, '/list/{pubkey:[0-9a-f]{64}}', $blob->list(...)),
+            new Route(HttpMethod::Get, self::HASH_PATTERN, $retrieval->get(...)),
+            new Route(HttpMethod::Get, self::HASH_PATTERN.'.{ext}', $retrieval->get(...)),
+            new Route(HttpMethod::Head, self::HASH_PATTERN, $retrieval->head(...)),
+            new Route(HttpMethod::Head, self::HASH_PATTERN.'.{ext}', $retrieval->head(...)),
+        ];
+    }
+
+    /**
+     * @return list<Route>
+     */
+    public function managementRoutes(BlobManagementController $management): array
+    {
+        return [
+            new Route(HttpMethod::Delete, self::HASH_PATTERN, $management->delete(...)),
+            new Route(HttpMethod::Get, '/list/{pubkey:[0-9a-f]{64}}', $management->list(...)),
         ];
     }
 
@@ -33,7 +42,6 @@ final class RouteTable
     {
         return [
             new Route(HttpMethod::Put, '/upload', $ingest->upload(...)),
-            new Route(HttpMethod::Put, '/mirror', $ingest->mirror(...)),
             new Route(HttpMethod::Put, '/media', $ingest->media(...)),
         ];
     }
@@ -41,11 +49,21 @@ final class RouteTable
     /**
      * @return list<Route>
      */
-    public function preflightRoutes(BlobPreflightController $preflight): array
+    public function mirrorRoutes(BlobMirrorController $mirror): array
     {
         return [
-            new Route(HttpMethod::Head, '/upload', $preflight->upload(...)),
-            new Route(HttpMethod::Head, '/media', $preflight->media(...)),
+            new Route(HttpMethod::Put, '/mirror', $mirror->mirror(...)),
+        ];
+    }
+
+    /**
+     * @return list<Route>
+     */
+    public function preflightRoutes(BlobPreflightController $uploadPreflight, BlobPreflightController $mediaPreflight): array
+    {
+        return [
+            new Route(HttpMethod::Head, '/upload', $uploadPreflight->preflight(...)),
+            new Route(HttpMethod::Head, '/media', $mediaPreflight->preflight(...)),
         ];
     }
 

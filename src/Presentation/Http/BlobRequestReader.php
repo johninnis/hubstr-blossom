@@ -135,7 +135,7 @@ final readonly class BlobRequestReader
             return $body;
         }
 
-        $url = JsonWireFormat::stringField(JsonWireFormat::decodeArray($body) ?? [], 'url');
+        $url = JsonWireFormat::stringField(JsonWireFormat::decodeObject($body) ?? [], 'url');
 
         return HttpUrl::tryFromString($url ?? '')
             ?? Responder::failure(HttpStatus::BAD_REQUEST, 'Missing or invalid "url" field');

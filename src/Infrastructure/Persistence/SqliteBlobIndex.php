@@ -121,7 +121,7 @@ final readonly class SqliteBlobIndex implements BlobIndexInterface
 
         $nip94 = null === $dimensions && null === $blurhash && null === $originalHash
             ? null
-            : new FileMetadata(
+            : FileMetadata::from(
                 url: $urlString,
                 mimeType: $mimeType,
                 hash: $hashHex,

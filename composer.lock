@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c80ba49c6f6751f7cf3e82b409b3aaa1",
+    "content-hash": "5552bb435403d9f898e824892c84d1d5",
     "packages": [
         {
             "name": "amphp/amp",
@@ -1678,26 +1678,26 @@
         },
         {
             "name": "innis/nostr-blossom",
-            "version": "v0.4.1",
+            "version": "v0.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/johninnis/nostr-blossom.git",
-                "reference": "8361a9dd4cd4408a778c2b3d1e08d83e5f40039e"
+                "reference": "ab3b3aa39998688564ca29f52962831081d5700c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/johninnis/nostr-blossom/zipball/8361a9dd4cd4408a778c2b3d1e08d83e5f40039e",
-                "reference": "8361a9dd4cd4408a778c2b3d1e08d83e5f40039e",
+                "url": "https://api.github.com/repos/johninnis/nostr-blossom/zipball/ab3b3aa39998688564ca29f52962831081d5700c",
+                "reference": "ab3b3aa39998688564ca29f52962831081d5700c",
                 "shasum": ""
             },
             "require": {
-                "innis/nostr-core": "^0.8.3",
+                "innis/nostr-core": "^0.9.1",
                 "php": "^8.4"
             },
             "require-dev": {
                 "ext-ffi": "*",
                 "friendsofphp/php-cs-fixer": "^3.95",
-                "innis/coding-standards": "^0.1",
+                "innis/coding-standards": "^0.2",
                 "phpstan/phpstan": "~2.2.6",
                 "phpstan/phpstan-phpunit": "^2.0",
                 "phpunit/phpunit": "^13.1",
@@ -1723,25 +1723,27 @@
             "description": "Blossom (BUD) protocol primitives for Nostr: blob addressing, kind-24242 auth, descriptors, and use cases",
             "support": {
                 "issues": "https://github.com/johninnis/nostr-blossom/issues",
-                "source": "https://github.com/johninnis/nostr-blossom/tree/v0.4.1"
+                "source": "https://github.com/johninnis/nostr-blossom/tree/v0.5.0"
             },
-            "time": "2026-09-24T07:32:36+00:00"
+            "time": "2026-10-04T00:00:54+00:00"
         },
         {
             "name": "innis/nostr-core",
-            "version": "v0.8.3",
+            "version": "v0.9.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/johninnis/nostr-core.git",
-                "reference": "94ba6a368c9b74948ae35183e06b2685faa46bee"
+                "reference": "0fbbd381820bf40dd86bac6742be1a8e1ff3ad27"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/johninnis/nostr-core/zipball/94ba6a368c9b74948ae35183e06b2685faa46bee",
-                "reference": "94ba6a368c9b74948ae35183e06b2685faa46bee",
+                "url": "https://api.github.com/repos/johninnis/nostr-core/zipball/0fbbd381820bf40dd86bac6742be1a8e1ff3ad27",
+                "reference": "0fbbd381820bf40dd86bac6742be1a8e1ff3ad27",
                 "shasum": ""
             },
             "require": {
+                "ext-ctype": "*",
+                "ext-filter": "*",
                 "ext-gmp": "*",
                 "ext-intl": "*",
                 "ext-mbstring": "*",
@@ -1754,7 +1756,7 @@
             "require-dev": {
                 "ext-ffi": "*",
                 "friendsofphp/php-cs-fixer": "^3.95",
-                "innis/coding-standards": "^0.1",
+                "innis/coding-standards": "^0.2",
                 "phpstan/phpstan": "~2.2.6",
                 "phpstan/phpstan-phpunit": "^2.0",
                 "phpunit/phpunit": "^13.1",
@@ -1789,9 +1791,9 @@
             ],
             "support": {
                 "issues": "https://github.com/johninnis/nostr-core/issues",
-                "source": "https://github.com/johninnis/nostr-core/tree/v0.8.3"
+                "source": "https://github.com/johninnis/nostr-core/tree/v0.9.1"
             },
-            "time": "2026-09-24T07:26:18+00:00"
+            "time": "2026-10-03T10:25:19+00:00"
         },
         {
             "name": "kelunik/certificate",
@@ -3395,16 +3397,16 @@
         },
         {
             "name": "innis/coding-standards",
-            "version": "v0.1.6",
+            "version": "v0.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/johninnis/coding-standards.git",
-                "reference": "89a761689b31d1fb00cc14780312bd254749f95f"
+                "reference": "ffeb4ab864f4acbebd01f98af227f3c850782d90"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/johninnis/coding-standards/zipball/89a761689b31d1fb00cc14780312bd254749f95f",
-                "reference": "89a761689b31d1fb00cc14780312bd254749f95f",
+                "url": "https://api.github.com/repos/johninnis/coding-standards/zipball/ffeb4ab864f4acbebd01f98af227f3c850782d90",
+                "reference": "ffeb4ab864f4acbebd01f98af227f3c850782d90",
                 "shasum": ""
             },
             "require": {
@@ -3418,6 +3420,9 @@
                 "phpunit/phpunit": "^13.1",
                 "rector/rector": "~2.5.9"
             },
+            "bin": [
+                "bin/check-path-lengths"
+            ],
             "type": "phpstan-extension",
             "extra": {
                 "phpstan": {
@@ -3426,7 +3431,7 @@
                     ]
                 },
                 "branch-alias": {
-                    "dev-master": "0.1.x-dev"
+                    "dev-master": "0.2.x-dev"
                 }
             },
             "autoload": {
@@ -3445,12 +3450,12 @@
                     "homepage": "https://www.innis.xyz/"
                 }
             ],
-            "description": "PHPStan rules that enforce the Innis coding conventions: clean-architecture layering, banned traits, interface/collection/exception placement, value-object immutability, and naming smells.",
+            "description": "PHPStan rules that enforce the Innis coding conventions: clean-architecture layering, banned traits, interface/collection/exception placement, value-object immutability, and naming smells; plus a check that no tracked path component exceeds 95 characters.",
             "support": {
                 "issues": "https://github.com/johninnis/coding-standards/issues",
-                "source": "https://github.com/johninnis/coding-standards/tree/v0.1.6"
+                "source": "https://github.com/johninnis/coding-standards/tree/v0.2.1"
             },
-            "time": "2026-08-04T10:09:35+00:00"
+            "time": "2026-10-03T02:54:24+00:00"
         },
         {
             "name": "myclabs/deep-copy",

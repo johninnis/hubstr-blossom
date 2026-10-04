@@ -21,7 +21,7 @@ Reads are public by design, and there is no setting to close them; content that 
 
 Every upload is hashed and type-sniffed by the server itself: the stored hash is what was received, not what was declared, and the stored type is what the bytes are, not what the `Content-Type` header said. Blob bytes are streamed straight from the process, with range requests, ETags and the stored `Content-Type` handled in application code, so the server runs behind any reverse proxy (or none) without proxy-specific offload features such as `X-Accel-Redirect`. See [ADR-0001](docs/adr/0001-stream-blob-bytes-from-the-process.md).
 
-The hashing, the NIP-94 metadata extraction (dimensions and blurhash) and the media optimisation are CPU-bound, so they run on a parallel worker pool rather than on the event loop. See [ADR-0006](docs/adr/0006-offload-cpu-work-to-a-worker-pool.md).
+The hashing, the NIP-94 metadata extraction (dimensions and blurhash) and the media optimisation are CPU-bound, so they run on a parallel worker pool rather than on the event loop. See [ADR-0006](docs/adr/0006-offload-blob-hashing-and-media-work-to-a-worker-pool.md).
 
 Optimisation re-encodes the image and keeps none of its metadata, so a JPEG's EXIF orientation is applied to the pixels first: a portrait phone photo sent to `PUT /media` is stored upright, and its EXIF (including any location data) does not travel with it. Animated GIFs and WebPs, and images over `max_image_pixels`, are stored as received. See [ADR-0010](docs/adr/0010-optimised-media-carries-no-metadata.md).
 
@@ -39,7 +39,7 @@ Optimisation re-encodes the image and keeps none of its metadata, so a JPEG's EX
 | BUD-11 | Kind-24242 endpoint authorisation on every write        |
 | BUD-12 | `DELETE /<sha256>`, `GET /list/<pubkey>`                |
 
-Every write requires a kind-24242 authorisation event whose `x` tag names the blob it authorises; the server-side rules for that event (verb, expiry, server scope, blob binding) live in the `innis/nostr-blossom` library and are recorded in its ADRs.
+Every write requires a kind-24242 authorisation event whose `x` tag names the blob it authorises; the server-side rules for that event (verb, expiry, server scope, blob binding) live in the `innis/nostr-blossom` library and are recorded in its ADRs. The event travels in the `Authorization: Nostr <credentials>` header encoded as unpadded base64url, as BUD-11 requires; the padded standard base64 that clients sent before BUD-11 is accepted as well.
 
 ## Mirroring and SSRF protection
 
@@ -47,21 +47,21 @@ Every write requires a kind-24242 authorisation event whose `x` tag names the bl
 
 Set `allow_private_mirror_hosts` to `true` only when mirroring within a trusted private network; it disables the address checks (resolution and connection pinning still happen, but private and reserved addresses are no longer rejected).
 
-See [ADR-0002](docs/adr/0002-pin-resolved-addresses-when-mirroring.md) for the threat model and why addresses are pinned per hop.
+See [ADR-0002](docs/adr/0002-pin-resolved-addresses-when-mirroring-remote-blobs.md) for the threat model and why addresses are pinned per hop.
 
 ## Browser access
 
-The server is browser-facing, so it advertises permissive CORS. Every response carries `access-control-allow-origin: *` together with the allowed and exposed header lists (including the Blossom `X-*` headers such as `X-Reason`, `X-Max-Upload-Size` and `X-Content-Types`), including the errors the HTTP driver answers before a request reaches a route (see [ADR-0009](docs/adr/0009-cors-headers-are-applied-by-the-error-handler-as-well.md)). `OPTIONS` preflight requests are synthesised for every route and answered with `204` and the methods allowed on that path, so cross-origin clients can preflight uploads, mirrors, deletes and reports without any per-route configuration.
+The server is browser-facing, so it advertises permissive CORS. Every response carries `access-control-allow-origin: *` together with the allowed and exposed header lists (including the Blossom `X-*` headers such as `X-Reason`, `X-Max-Upload-Size` and `X-Content-Types`), including the errors the HTTP driver answers before a request reaches a route (see [ADR-0009](docs/adr/0009-cors-headers-are-applied-by-the-error-handler-as-well-as-the-middleware.md)). `OPTIONS` preflight requests are synthesised for every route and answered with `204` and the methods allowed on that path, so cross-origin clients can preflight uploads, mirrors, deletes and reports without any per-route configuration.
 
 The root path serves a small landing page (`templates/index.latte`, styled by the assets under `public/`); unknown paths fall back to serving a matching static asset or an HTML error page (`templates/error.latte`).
 
 ## Storage
 
-Blob bytes live on the local filesystem under `storage_path`, sharded by the first two hex characters of their hash, with the upload-staging area in a `tmp/` subdirectory of the same root so a completed upload moves into place with an atomic same-filesystem rename. The SQLite index (WAL mode) records one row per tenant per blob, so the same bytes uploaded by two tenants are stored once and removed only when the last tenant deletes them. A small in-process descriptor cache speeds repeated reads of the same blob (see [ADR-0005](docs/adr/0005-cache-blob-descriptors-with-a-decorator.md)).
+Blob bytes live on the local filesystem under `storage_path`, sharded by the first two hex characters of their hash, with the upload-staging area in a `tmp/` subdirectory of the same root so a completed upload moves into place with an atomic same-filesystem rename. The SQLite index (WAL mode) records one row per tenant per blob, so the same bytes uploaded by two tenants are stored once and removed only when the last tenant deletes them. A small in-process descriptor cache speeds repeated reads of the same blob (see [ADR-0005](docs/adr/0005-cache-blob-descriptors-with-a-decorator-over-the-index.md)).
 
 The index suits a metadata workload of small, infrequent writes (one row per upload or delete) against many reads; it is not intended as a high-write-contention store.
 
-The blobs and the index live in `data/` and the caches in `var/`. Back up `data/`; you can delete `var/` at any time without losing anything. The server writes no log file of its own, logging to standard output for its supervisor to keep. The sibling `hubstr-relay` service uses the same layout. See [ADR-0003](docs/adr/0003-separate-durable-and-disposable-state.md) for the reasoning behind the split.
+The blobs and the index live in `data/` and the caches in `var/`. Back up `data/`; you can delete `var/` at any time without losing anything. The server writes no log file of its own, logging to standard output for its supervisor to keep. The sibling `hubstr-relay` service uses the same layout. See [ADR-0003](docs/adr/0003-separate-durable-and-disposable-state-on-disk.md) for the reasoning behind the split.
 
 ## Stack
 

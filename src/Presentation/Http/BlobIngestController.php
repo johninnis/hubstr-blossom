@@ -6,7 +6,6 @@ namespace Innis\Hubstr\Blossom\Presentation\Http;
 
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
-use Innis\Nostr\Blossom\Application\UseCase\MirrorBlobUseCase;
 use Innis\Nostr\Blossom\Application\UseCase\OptimiseMediaUseCase;
 use Innis\Nostr\Blossom\Application\UseCase\UploadBlobUseCase;
 
@@ -15,7 +14,6 @@ final readonly class BlobIngestController
     public function __construct(
         private UploadBlobUseCase $uploadBlob,
         private OptimiseMediaUseCase $optimiseMedia,
-        private MirrorBlobUseCase $mirrorBlob,
         private BlobRequestReader $request,
     ) {
     }
@@ -40,15 +38,5 @@ final readonly class BlobIngestController
             $this->request->authHeader($request),
             $this->request->blobSource($request),
         ));
-    }
-
-    public function mirror(Request $request): Response
-    {
-        $url = $this->request->mirrorUrl($request);
-        if ($url instanceof Response) {
-            return $url;
-        }
-
-        return Responder::respond($this->mirrorBlob->execute($this->request->authHeader($request), $url));
     }
 }

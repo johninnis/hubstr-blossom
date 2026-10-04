@@ -30,14 +30,14 @@
         "amphp/socket": "^2",
         "amphp/sync": "^2",
         "innis/hubstr-core": "^0.2",
-        "innis/nostr-blossom": "^0.4.1",
-        "innis/nostr-core": "^0.8.3",
+        "innis/nostr-blossom": "^0.5",
+        "innis/nostr-core": "^0.9.1",
         "kornrunner/blurhash": "^1.2"
     },
     "require-dev": {
         "ext-ffi": "*",
         "friendsofphp/php-cs-fixer": "^3.95",
-        "innis/coding-standards": "^0.1",
+        "innis/coding-standards": "^0.2",
         "league/uri": "^7",
         "phpstan/phpstan": "~2.2.6",
         "phpstan/phpstan-phpunit": "^2.0",

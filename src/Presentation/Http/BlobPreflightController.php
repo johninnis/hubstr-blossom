@@ -7,8 +7,7 @@ namespace Innis\Hubstr\Blossom\Presentation\Http;
 use Amp\Http\HttpStatus;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\Response;
-use Innis\Nostr\Blossom\Application\UseCase\CheckMediaUseCase;
-use Innis\Nostr\Blossom\Application\UseCase\CheckUploadUseCase;
+use Closure;
 use Innis\Nostr\Blossom\Domain\Failure\BlossomFailure;
 use Innis\Nostr\Blossom\Domain\ValueObject\DeclaredBlob;
 use Innis\Nostr\Blossom\Domain\ValueObject\MimeType;
@@ -16,28 +15,17 @@ use Innis\Nostr\Blossom\Domain\ValueObject\UploadConstraints;
 
 final readonly class BlobPreflightController
 {
+    /**
+     * @param Closure(string, DeclaredBlob): ?BlossomFailure $check
+     */
     public function __construct(
-        private CheckUploadUseCase $checkUpload,
-        private CheckMediaUseCase $checkMedia,
+        private Closure $check,
         private UploadConstraints $constraints,
         private BlobRequestReader $request,
     ) {
     }
 
-    public function upload(Request $request): Response
-    {
-        return $this->preflight($request, $this->checkUpload->execute(...));
-    }
-
-    public function media(Request $request): Response
-    {
-        return $this->preflight($request, $this->checkMedia->execute(...));
-    }
-
-    /**
-     * @param callable(string, DeclaredBlob): ?BlossomFailure $check
-     */
-    private function preflight(Request $request, callable $check): Response
+    public function preflight(Request $request): Response
     {
         $declared = $this->request->declaredBlob($request);
         if ($declared instanceof Response) {
@@ -48,7 +36,7 @@ final readonly class BlobPreflightController
             return $this->requirements();
         }
 
-        return Responder::respond($check($this->request->authHeader($request), $declared));
+        return Responder::respond(($this->check)($this->request->authHeader($request), $declared));
     }
 
     private function requirements(): Response

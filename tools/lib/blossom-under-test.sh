@@ -97,12 +97,14 @@ start_blossom_under_test() {
     [ "${ready}" = 1 ] || { echo "blossom did not become ready" >&2; exit 1; }
 }
 
-# auth_header <verb> [<sha256>]: a "Nostr <base64>" value for the Authorization header.
+# auth_header <verb> [<sha256>]: the credentials after "Nostr " in the Authorization header,
+# the signed kind-24242 event in unpadded base64url as BUD-11 requires.
 auth_header() {
     local verb="$1" hash="${2:-}" tags
     tags=(-t "t=${verb}" -t "expiration=$(( $(date +%s) + 3600 ))")
     [ -n "${hash}" ] && tags+=(-t "x=${hash}")
-    nak event -k 24242 -c 'Blossom auth' "${tags[@]}" --sec "${TENANT_SEC}" -q 2>/dev/null </dev/null | base64 -w0
+    nak event -k 24242 -c 'Blossom auth' "${tags[@]}" --sec "${TENANT_SEC}" -q 2>/dev/null </dev/null \
+        | tr -d '\n' | base64 -w0 | tr '+/' '-_' | tr -d '='
 }
 
 # random_blob <path> <pixels>: writes a square PNG of random pixels with that side length.

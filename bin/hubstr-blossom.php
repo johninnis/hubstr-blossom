@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Amp\Socket\ResourceServerSocketFactory;
 use Innis\Hubstr\Blossom\HostContainer;
-use Innis\Hubstr\Blossom\Infrastructure\Config\HostConfig;
+use Innis\Hubstr\Blossom\Infrastructure\Config\HostConfigLoader;
 use Innis\Hubstr\Core\Application\Service\Kernel;
 use Innis\Hubstr\Core\Infrastructure\Http\HttpServerFactory;
 use Innis\Hubstr\Core\Infrastructure\Logging\LoggerFactory;
@@ -14,7 +14,7 @@ use function Amp\ByteStream\getStdout;
 
 require_once dirname(__DIR__).'/vendor/autoload.php';
 
-$config = HostConfig::load(dirname(__DIR__).'/config/blossom.php');
+$config = new HostConfigLoader()->load(dirname(__DIR__).'/config/blossom.php');
 $logger = new LoggerFactory(getStdout(), $config->getRuntime()->getLogLevel())->create('blossom');
 
 $container = new HostContainer($config);

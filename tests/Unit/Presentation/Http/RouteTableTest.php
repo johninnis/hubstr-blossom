@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Innis\Hubstr\Blossom\Tests\Unit\Presentation\Http;
 
-use Innis\Hubstr\Blossom\Presentation\Http\BlobController;
 use Innis\Hubstr\Blossom\Presentation\Http\BlobIngestController;
+use Innis\Hubstr\Blossom\Presentation\Http\BlobManagementController;
+use Innis\Hubstr\Blossom\Presentation\Http\BlobMirrorController;
 use Innis\Hubstr\Blossom\Presentation\Http\BlobPreflightController;
 use Innis\Hubstr\Blossom\Presentation\Http\BlobReportController;
+use Innis\Hubstr\Blossom\Presentation\Http\BlobRetrievalController;
 use Innis\Hubstr\Blossom\Presentation\Http\RouteTable;
 use Innis\Hubstr\Core\Infrastructure\Http\Route;
 use PHPUnit\Framework\TestCase;
@@ -20,9 +22,14 @@ final class RouteTableTest extends TestCase
         $table = new RouteTable();
 
         $routes = [
-            ...$table->blobRoutes(new ReflectionClass(BlobController::class)->newInstanceWithoutConstructor()),
+            ...$table->retrievalRoutes(new ReflectionClass(BlobRetrievalController::class)->newInstanceWithoutConstructor()),
+            ...$table->managementRoutes(new ReflectionClass(BlobManagementController::class)->newInstanceWithoutConstructor()),
             ...$table->ingestRoutes(new ReflectionClass(BlobIngestController::class)->newInstanceWithoutConstructor()),
-            ...$table->preflightRoutes(new ReflectionClass(BlobPreflightController::class)->newInstanceWithoutConstructor()),
+            ...$table->mirrorRoutes(new ReflectionClass(BlobMirrorController::class)->newInstanceWithoutConstructor()),
+            ...$table->preflightRoutes(
+                new ReflectionClass(BlobPreflightController::class)->newInstanceWithoutConstructor(),
+                new ReflectionClass(BlobPreflightController::class)->newInstanceWithoutConstructor(),
+            ),
             ...$table->reportRoutes(new ReflectionClass(BlobReportController::class)->newInstanceWithoutConstructor()),
         ];
 
@@ -36,8 +43,8 @@ final class RouteTableTest extends TestCase
             'DELETE /{sha256:[0-9a-f]{64}}',
             'GET /list/{pubkey:[0-9a-f]{64}}',
             'PUT /upload',
-            'PUT /mirror',
             'PUT /media',
+            'PUT /mirror',
             'HEAD /upload',
             'HEAD /media',
             'PUT /report',

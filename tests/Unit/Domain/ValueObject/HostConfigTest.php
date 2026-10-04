@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Innis\Hubstr\Blossom\Tests\Unit\Infrastructure\Config;
+namespace Innis\Hubstr\Blossom\Tests\Unit\Domain\ValueObject;
 
-use Innis\Hubstr\Blossom\Infrastructure\Config\HostConfig;
+use Innis\Hubstr\Blossom\Domain\ValueObject\HostConfig;
 use Innis\Hubstr\Core\Domain\ValueObject\ConfigValues;
 use Innis\Nostr\Core\Domain\ValueObject\Identity\PublicKey;
 use InvalidArgumentException;

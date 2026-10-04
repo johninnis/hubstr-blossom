@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Innis\Hubstr\Blossom\Infrastructure\Config;
+namespace Innis\Hubstr\Blossom\Domain\ValueObject;
 
 use Innis\Hubstr\Core\Domain\ValueObject\ConfigValues;
 use Innis\Hubstr\Core\Domain\ValueObject\ServiceRuntimeConfig;
-use Innis\Hubstr\Core\Infrastructure\Config\ConfigLoader;
 use Innis\Nostr\Blossom\Domain\Collection\AllowedMimeTypes;
 use Innis\Nostr\Blossom\Domain\ValueObject\HttpUrl;
 use Innis\Nostr\Blossom\Domain\ValueObject\MimeType;
@@ -19,7 +18,6 @@ use InvalidArgumentException;
 
 final readonly class HostConfig
 {
-    private const string ENVIRONMENT_VARIABLE = 'HUBSTR_BLOSSOM_CONFIG';
     private const array KEYS = ['tenant_pubkeys', 'base_url', 'storage_path', 'allowed_types', 'max_upload_bytes', 'max_image_pixels', 'worker_pool_limit', 'allow_private_mirror_hosts'];
     private const int DEFAULT_MAX_IMAGE_PIXELS = 50_000_000;
 
@@ -61,11 +59,6 @@ final readonly class HostConfig
     public function getServerConfig(): ServerConfig
     {
         return $this->serverConfig;
-    }
-
-    public static function load(string $configPath): self
-    {
-        return self::fromValues(new ConfigLoader(self::ENVIRONMENT_VARIABLE)->load($configPath));
     }
 
     public static function fromValues(ConfigValues $values): self

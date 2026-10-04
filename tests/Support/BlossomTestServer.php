@@ -60,6 +60,11 @@ final class BlossomTestServer
         return $this->authHeaderFor($this->owner, $verb, $hash);
     }
 
+    public function legacyAuthHeader(string $verb, ?string $hash = null): string
+    {
+        return new BlossomAuthHeader(self::sharedSigner())->legacyFor($this->owner, $verb, $hash);
+    }
+
     public function authHeaderFor(KeyPair $keyPair, string $verb, ?string $hash = null): string
     {
         return new BlossomAuthHeader(self::sharedSigner())->for($keyPair, $verb, $hash);

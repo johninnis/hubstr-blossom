@@ -75,6 +75,17 @@ final class Bud04Test extends TestCase
         self::assertSame(400, $response->status());
     }
 
+    #[TestDox('BUD-04 — PUT /mirror whose body is a JSON array rather than an object is rejected with 400')]
+    public function testMirrorRejectsABodyThatIsAJsonArray(): void
+    {
+        $response = self::$server->request('PUT', '/mirror', [
+            'Authorization' => self::$server->authHeader('upload'),
+            'Content-Type' => 'application/json',
+        ], (string) json_encode([['url' => self::$server->baseUrl().'/'.str_repeat('ab', 32)]]));
+
+        self::assertSame(400, $response->status());
+    }
+
     #[TestDox('BUD-04 — PUT /mirror of an unreachable source responds with 502')]
     public function testMirrorOfUnreachableSourceFails(): void
     {

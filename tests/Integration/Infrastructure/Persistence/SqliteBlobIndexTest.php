@@ -164,7 +164,7 @@ final class SqliteBlobIndexTest extends TestCase
             size: 2048,
             type: MimeType::fromString('image/png'),
             uploaded: Timestamp::fromInt(1000),
-            nip94: new FileMetadata(
+            nip94: FileMetadata::from(
                 url: $url,
                 mimeType: 'image/png',
                 hash: $sha256,
