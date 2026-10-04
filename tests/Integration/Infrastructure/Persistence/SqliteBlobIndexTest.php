@@ -90,6 +90,52 @@ final class SqliteBlobIndexTest extends TestCase
         self::assertSame(2000, $results[1]->getUploaded()->toInt());
     }
 
+    public function testListWithCursorPagesAfterTheCursorBlob(): void
+    {
+        $this->index->save($this->tenant, $this->makeDescriptor('a', 1000));
+        $this->index->save($this->tenant, $this->makeDescriptor('b', 3000));
+        $this->index->save($this->tenant, $this->makeDescriptor('c', 2000));
+
+        $results = $this->index->list($this->tenant, new ListQuery(cursor: $this->hash('b')))->toArray();
+
+        self::assertSame([2000, 1000], array_map(static fn (BlobDescriptor $blob): int => $blob->getUploaded()->toInt(), $results));
+    }
+
+    public function testListWithCursorNeverIncludesTheCursorBlob(): void
+    {
+        $this->index->save($this->tenant, $this->makeDescriptor('a', 1000));
+        $this->index->save($this->tenant, $this->makeDescriptor('b', 2000));
+
+        $results = $this->index->list($this->tenant, new ListQuery(cursor: $this->hash('a')))->toArray();
+
+        self::assertSame([], $results);
+    }
+
+    public function testListWithCursorOnASharedUploadedPagesByHash(): void
+    {
+        $newer = $this->makeDescriptor('cursor-newer', 2000);
+        $older = $this->makeDescriptor('cursor-older', 2000);
+        if ($older->getSha256()->toHex() > $newer->getSha256()->toHex()) {
+            [$newer, $older] = [$older, $newer];
+        }
+        $this->index->save($this->tenant, $newer);
+        $this->index->save($this->tenant, $older);
+
+        $results = $this->index->list($this->tenant, new ListQuery(cursor: $newer->getSha256()))->toArray();
+
+        self::assertSame([$older->getSha256()->toHex()], array_map(static fn (BlobDescriptor $blob): string => $blob->getSha256()->toHex(), $results));
+    }
+
+    public function testListWithUnknownCursorPagesFromTheTop(): void
+    {
+        $this->index->save($this->tenant, $this->makeDescriptor('a', 1000));
+        $this->index->save($this->tenant, $this->makeDescriptor('b', 2000));
+
+        $results = $this->index->list($this->tenant, new ListQuery(cursor: $this->hash('never-saved')))->toArray();
+
+        self::assertSame([2000, 1000], array_map(static fn (BlobDescriptor $blob): int => $blob->getUploaded()->toInt(), $results));
+    }
+
     public function testListWithSinceFilter(): void
     {
         $this->index->save($this->tenant, $this->makeDescriptor('a', 1000));

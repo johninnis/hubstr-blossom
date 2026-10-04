@@ -87,12 +87,22 @@ final class Bud12Test extends TestCase
     #[TestDox('BUD-12 — The list endpoint ignores a query parameter it does not know')]
     public function testListIgnoresAnUnknownQueryParameter(): void
     {
-        $response = self::$server->request('GET', '/list/'.self::$server->ownerPubkeyHex().'?cursor=not-a-valid-hash', [
+        $response = self::$server->request('GET', '/list/'.self::$server->ownerPubkeyHex().'?shoesize=eleven', [
             'Authorization' => self::$server->authHeader('list'),
         ]);
 
         self::assertSame(200, $response->status());
         self::assertIsArray(json_decode($response->body(), true));
+    }
+
+    #[TestDox('BUD-12 — A malformed cursor is a bad request')]
+    public function testListRejectsAMalformedCursor(): void
+    {
+        $response = self::$server->request('GET', '/list/'.self::$server->ownerPubkeyHex().'?cursor=not-a-valid-hash', [
+            'Authorization' => self::$server->authHeader('list'),
+        ]);
+
+        self::assertSame(400, $response->status());
     }
 
     #[TestDox('BUD-12 — Listing a pubkey other than the authenticated tenant is forbidden')]
@@ -122,6 +132,45 @@ final class Bud12Test extends TestCase
 
         self::assertSame(200, $response->status());
         self::assertCount(2, JsonBody::from($response->body())->toArray());
+    }
+
+    #[TestDox('BUD-12 — The list endpoint pages through its results with the cursor')]
+    public function testListPagesThroughWithTheCursor(): void
+    {
+        $uploaded = [];
+        for ($i = 0; $i < 3; ++$i) {
+            $content = $this->uniquePng();
+            $uploaded[] = hash('sha256', $content);
+            self::$server->request('PUT', '/upload', [
+                'Authorization' => self::$server->authHeader('upload', hash('sha256', $content)),
+                'Content-Type' => 'image/png',
+            ], $content);
+        }
+
+        $whole = self::$server->request('GET', '/list/'.self::$server->ownerPubkeyHex(), [
+            'Authorization' => self::$server->authHeader('list'),
+        ]);
+        $expected = array_column(JsonBody::from($whole->body())->toArray(), 'sha256');
+        self::assertNotEmpty($expected);
+
+        $paged = [];
+        $cursor = null;
+        do {
+            $page = JsonBody::from(self::$server->request(
+                'GET',
+                '/list/'.self::$server->ownerPubkeyHex().'?limit=2'.(null === $cursor ? '' : '&cursor='.$cursor),
+                ['Authorization' => self::$server->authHeader('list')],
+            )->body())->toArray();
+            $hashes = array_column($page, 'sha256');
+            if (null !== $cursor) {
+                self::assertNotContains($cursor, $hashes);
+            }
+            $cursor = end($hashes) ?: null;
+            $paged = [...$paged, ...$hashes];
+        } while ([] !== $hashes && count($paged) <= count($expected));
+
+        self::assertSame($expected, $paged);
+        self::assertNotEmpty(array_intersect($uploaded, $paged));
     }
 
     #[TestDox('BUD-12 — A tenant can neither list nor delete a blob held by another tenant')]

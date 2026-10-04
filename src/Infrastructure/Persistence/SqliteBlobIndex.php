@@ -75,14 +75,32 @@ final readonly class SqliteBlobIndex implements BlobIndexInterface
     public function list(PublicKey $tenant, ListQuery $query): BlobDescriptorCollection
     {
         $window = new TimeWindowClause('uploaded', $query);
+        $conditions = ['tenant_pubkey = :tenant', ...$window->getConditions()];
+        $intParameters = $window->getParameters();
+        $cursorHash = null;
+
+        $cursor = $query->getCursor();
+        if (null !== $cursor) {
+            $cursorUploaded = $this->uploadedOf($tenant, $cursor);
+            // A cursor naming no blob of the tenant's pages from the top: the client cannot have
+            // seen the rows before a position that does not exist.
+            if (null !== $cursorUploaded) {
+                $conditions[] = '(uploaded < :cursor_uploaded OR (uploaded = :cursor_uploaded AND sha256 < :cursor_sha256))';
+                $intParameters[':cursor_uploaded'] = $cursorUploaded;
+                $cursorHash = $cursor->toHex();
+            }
+        }
 
         $stmt = $this->pdo->prepare(sprintf(
             'SELECT * FROM blobs WHERE %s ORDER BY uploaded DESC, sha256 DESC LIMIT :limit',
-            implode(' AND ', ['tenant_pubkey = :tenant', ...$window->getConditions()]),
+            implode(' AND ', $conditions),
         ));
         $stmt->bindValue(':tenant', $tenant->toHex());
-        foreach ($window->getParameters() as $parameter => $value) {
+        foreach ($intParameters as $parameter => $value) {
             $stmt->bindValue($parameter, $value, PDO::PARAM_INT);
+        }
+        if (null !== $cursorHash) {
+            $stmt->bindValue(':cursor_sha256', $cursorHash);
         }
         $stmt->bindValue(':limit', $query->getLimit(), PDO::PARAM_INT);
         $stmt->execute();
@@ -102,6 +120,16 @@ final readonly class SqliteBlobIndex implements BlobIndexInterface
         $stmt->execute([':tenant' => $tenant->toHex(), ':sha256' => $hash->toHex()]);
 
         return $stmt->rowCount() > 0;
+    }
+
+    private function uploadedOf(PublicKey $tenant, BlobHash $hash): ?int
+    {
+        $stmt = $this->pdo->prepare(sprintf('SELECT uploaded FROM %s WHERE tenant_pubkey = :tenant AND sha256 = :sha256', self::TABLE));
+        $stmt->execute([':tenant' => $tenant->toHex(), ':sha256' => $hash->toHex()]);
+
+        $uploaded = $stmt->fetchColumn();
+
+        return false === $uploaded ? null : (int) $uploaded;
     }
 
     private function hydrateDescriptor(StoredRow $row): BlobDescriptor

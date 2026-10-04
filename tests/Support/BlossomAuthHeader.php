@@ -49,7 +49,7 @@ final readonly class BlossomAuthHeader
 
         return Rumour::draft(
             $keyPair->getPublicKey(),
-            EventKind::fromInt(EventKind::BLOSSOM_BLOB),
+            EventKind::fromInt(EventKind::BLOSSOM_AUTHORISATION),
             EventContent::fromString('Blossom auth'),
             new TagCollection($tags),
         )->sign($keyPair, $this->signer);
