@@ -13,6 +13,8 @@ final class Bud11Test extends TestCase
 {
     private const string DECLARED_HASH = 'c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2';
 
+    private const int LONGEST_AUTHORIZATION_HEADER = 8000;
+
     private static BlossomTestServer $server;
 
     public static function setUpBeforeClass(): void
@@ -37,6 +39,14 @@ final class Bud11Test extends TestCase
     public function testLegacyPaddedBase64TokenIsAccepted(): void
     {
         $response = $this->preflightUpload(self::$server->legacyAuthHeader('upload', self::DECLARED_HASH));
+
+        self::assertSame(200, $response->status());
+    }
+
+    #[TestDox('BUD-11 — A token filling an 8000-character Authorization header, the longest a Blossom header may be, authorises the endpoint')]
+    public function testTokenFillingTheLongestAuthorizationHeaderIsAccepted(): void
+    {
+        $response = $this->preflightUpload(self::$server->authHeaderOfLength('upload', self::DECLARED_HASH, self::LONGEST_AUTHORIZATION_HEADER));
 
         self::assertSame(200, $response->status());
     }

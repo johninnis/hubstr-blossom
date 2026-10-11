@@ -36,7 +36,7 @@ Optimisation re-encodes the image and keeps none of its metadata, so a JPEG's EX
 | BUD-06 | `HEAD /upload` and `HEAD /media` upload requirements    |
 | BUD-08 | NIP-94 file metadata (dimensions, blurhash)             |
 | BUD-09 | `PUT /report` (kind 1984 blob reports)                  |
-| BUD-11 | Kind-24242 endpoint authorisation on every write        |
+| BUD-11 | Kind-24242 authorisation on every write and list        |
 | BUD-12 | `DELETE /<sha256>`, `GET /list/<pubkey>`                |
 
 Every write requires a kind-24242 authorisation event whose `x` tag names the blob it authorises; the server-side rules for that event (verb, expiry, server scope, blob binding) live in the `innis/nostr-blossom` library and are recorded in its ADRs. The event travels in the `Authorization: Nostr <credentials>` header encoded as unpadded base64url, as BUD-11 requires; the padded standard base64 that clients sent before BUD-11 is accepted as well.
@@ -73,9 +73,11 @@ The blobs and the index live in `data/` and the caches in `var/`. Back up `data/
 
 ## Requirements
 
-- PHP 8.4+ with `ext-ctype`, `ext-exif`, `ext-fileinfo`, `ext-gd`, `ext-pdo_sqlite`, `ext-pcntl`, `ext-zlib`, `ext-gmp`, `ext-intl`, `ext-mbstring`, `ext-openssl` and `ext-sodium`
+- PHP 8.4+ with `ext-ctype`, `ext-exif`, `ext-fileinfo`, `ext-filter`, `ext-gd`, `ext-pdo_sqlite`, `ext-pcntl`, `ext-tokenizer`, `ext-zlib`, `ext-gmp`, `ext-intl`, `ext-mbstring`, `ext-openssl` and `ext-sodium`
 - `ext-ffi` with `libsecp256k1` for native signature verification. A deployment can run without it, on a pure-PHP fallback; a development install cannot, because the test suite exercises the native path and `ext-ffi` is a dev requirement
 - [Caddy](https://caddyserver.com/) (or another reverse proxy) for TLS in a public deployment
+
+`ext-filter` and `ext-tokenizer` are enabled in most PHP builds but can be missing from a minimal one. `ext-filter` is called by the mirror fetcher's address check, by `innis/nostr-core` and by amphp's DNS and URI handling; `ext-tokenizer` is needed by `latte/latte`, which renders the landing and error pages through `hubstr-core`.
 
 A development install additionally needs `ext-iconv`, which `php-cs-fixer` pulls in through `symfony/polyfill-mbstring`. The server itself never calls it, so a production `composer install --no-dev` does not require it.
 
@@ -132,6 +134,8 @@ php bin/hubstr-blossom.php
 ## Deployment
 
 The server listens on localhost. Use Caddy (or similar) as a reverse proxy for TLS termination; a plain `reverse_proxy` is all that is required, because the daemon streams blob bytes, handles ranges, ETags and CORS, and returns the stored `Content-Type` itself. See `resources/Caddyfile` for an example configuration with automatic TLS and an edge upload-size limit.
+
+A proxy in front of the daemon must accept a request header line of 8 KiB. A token authorising a batch of blobs grows with the blobs it names, and the `Authorization` header carrying it may be up to 8000 characters long; Caddy and the daemon accept that with their defaults, but a proxy that refuses longer header lines refuses batch tokens before they reach the server.
 
 The SQLite schema is applied by the daemon on start from the numbered migrations in `resources/migrations/` (`0001-initial-schema.sql` onwards). The reached version is kept in SQLite's `user_version`; a schema change is a new numbered file, never an edit to one that has shipped.
 

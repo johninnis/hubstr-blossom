@@ -15,6 +15,7 @@
         "ext-ctype": "*",
         "ext-exif": "*",
         "ext-fileinfo": "*",
+        "ext-filter": "*",
         "ext-gd": "*",
         "ext-pdo_sqlite": "*",
         "amphp/amp": "^3",
@@ -25,13 +26,12 @@
         "amphp/http-client": "^5.3",
         "amphp/http-server": "^3",
         "amphp/http-server-router": "^2",
-        "amphp/http-server-static-content": "^2",
         "amphp/parallel": "^2",
         "amphp/socket": "^2",
         "amphp/sync": "^2",
         "innis/hubstr-core": "^0.2",
-        "innis/nostr-blossom": "^0.5",
-        "innis/nostr-core": "^0.9.1",
+        "innis/nostr-blossom": "^0.6",
+        "innis/nostr-core": "^0.10",
         "kornrunner/blurhash": "^1.2"
     },
     "require-dev": {
