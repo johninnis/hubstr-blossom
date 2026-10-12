@@ -180,6 +180,7 @@ composer fix-style         # PHP-CS-Fixer
 composer check-style       # Dry-run style check
 composer rector            # Apply the PHP 8.4 modernisation rules
 composer check-rector      # Dry-run Rector check
+composer check-path-lengths  # No tracked path component over 95 characters
 ```
 
 The acceptance suite boots a real daemon on a free port against a throwaway config and storage directory, and drives every supported BUD over HTTP.
