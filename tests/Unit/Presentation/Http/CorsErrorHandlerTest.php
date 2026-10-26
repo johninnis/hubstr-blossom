@@ -21,7 +21,7 @@ final class CorsErrorHandlerTest extends TestCase
         $response = new CorsErrorHandler($inner, new CorsHeaders())->handleError(HttpStatus::INTERNAL_SERVER_ERROR);
 
         self::assertSame('*', $response->getHeader('access-control-allow-origin'));
-        self::assertSame('Authorization, Content-Type, X-SHA-256, X-Content-Length, X-Content-Type', $response->getHeader('access-control-allow-headers'));
+        self::assertSame('Authorization, *', $response->getHeader('access-control-allow-headers'));
         self::assertNotNull($response->getHeader('access-control-expose-headers'));
     }
 

@@ -75,13 +75,13 @@ final class Bud12Test extends TestCase
         self::assertNotEmpty($json);
     }
 
-    #[TestDox('BUD-12 — The /list/<pubkey> preflight advertises read methods but no write methods')]
-    public function testOptionsOnListPathAdvertisesGetNotWriteMethods(): void
+    #[TestDox('BUD-12 — The /list/<pubkey> preflight includes the BUD-01 method baseline')]
+    public function testOptionsOnListPathAdvertisesRequiredMethods(): void
     {
         $response = self::$server->request('OPTIONS', '/list/'.self::$server->ownerPubkeyHex());
 
         self::assertSame(204, $response->status());
-        self::assertSame('GET, HEAD, OPTIONS', $response->header('access-control-allow-methods'));
+        self::assertSame('DELETE, GET, HEAD, OPTIONS, PUT', $response->header('access-control-allow-methods'));
     }
 
     #[TestDox('BUD-12 — The list endpoint ignores a query parameter it does not know')]
