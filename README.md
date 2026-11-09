@@ -74,7 +74,7 @@ The blobs and the index live in `data/` and the caches in `var/`. Back up `data/
 ## Requirements
 
 - PHP 8.4+ with `ext-ctype`, `ext-exif`, `ext-fileinfo`, `ext-filter`, `ext-gd`, `ext-pdo_sqlite`, `ext-pcntl`, `ext-tokenizer`, `ext-zlib`, `ext-gmp`, `ext-intl`, `ext-mbstring`, `ext-openssl` and `ext-sodium`
-- `ext-ffi` with `libsecp256k1` for native signature verification. A deployment can run without it, on a pure-PHP fallback; a development install cannot, because the test suite exercises the native path and `ext-ffi` is a dev requirement
+- `ext-ffi`, which `composer.json` requires, and the `libsecp256k1` library, for native signature verification. The service will not start verifying without them, and a web SAPI also needs `ffi.enable=true`
 - [Caddy](https://caddyserver.com/) (or another reverse proxy) for TLS in a public deployment
 
 `ext-filter` and `ext-tokenizer` are enabled in most PHP builds but can be missing from a minimal one. `ext-filter` is called by the mirror fetcher's address check, by `innis/nostr-core` and by amphp's DNS and URI handling; `ext-tokenizer` is needed by `latte/latte`, which renders the landing and error pages through `hubstr-core`.
